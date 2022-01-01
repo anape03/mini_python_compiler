@@ -1,0 +1,277 @@
+/*
+* Γεωργιάδη Δέσποινα P3180026
+* Κωνσταντίνος Βασιλόπουλος P3180018
+* Χρήστος Παυλίδης P3190167
+* Αναστασία Πετρουλάκη P3190171
+*/
+
+Package minipython;
+
+Helpers
+	digit = ['0' .. '9'];
+	letter = ['a' .. 'z']|['A' .. 'Z']; 
+	cr = 13; 
+	lf = 10;
+	all = [0..127]; 
+	space = 32;
+	eol = lf | cr | cr lf ;
+	not_eol = [all - [cr + lf]]; 
+	pound = '#';
+	underscore = '_';
+	dquote = 34;
+	squote = 39;	
+	dot = '.';
+	
+Tokens
+	dott = dot;
+	tab = 9;
+	plus = '+';
+	minus = '-';
+	mult = '*';
+	exp = '**';
+	div = '/';
+	mod = '%';
+	assign = '=';
+	minusassign = '-=';
+	divassign = '/=';
+	dict = 'dict';
+	def = 'def';
+	l_par = '(';
+	r_par = ')';
+	l_br = '[';
+	r_br = ']';
+	comma = ',';
+	if = 'if';
+	else = 'else';
+	while = 'while';
+	for = 'for';
+	in = 'in';
+	print = 'print';
+	return = 'return';
+	eq = '==';
+	noteq = '!=';
+	less = '<';
+	great = '>';
+	lesseq = '<=';
+	greateq = '>=';
+	semi = ':';
+	true = 'true';
+	false = 'false';
+	blank = space | eol;
+	line_comment = pound not_eol* eol;
+	assert = 'assert';
+	len = 'len';
+	max = 'max';
+	min = 'min';
+	import = 'import';
+	as = 'as';
+	from = 'from';
+	not = 'not';
+	and = 'and' | '&&';
+	or = 'or';
+	none = 'None';
+	id = (letter | underscore)(letter | digit | underscore)*;
+	number = (digit+) | (digit+ dot digit+);	
+	string = (dquote (space | letter)* dquote) | (squote (space | letter)* squote);
+
+Ignored Tokens
+	blank, line_comment;
+
+Productions
+	goal = commands* {-> New goal( [commands] ) };
+	commands = {function} function {-> New commands.func( function ) }
+			| {statement} statement {-> New commands.stat( statement ) };
+	function = def identifier l_par argument? r_par semi statement {-> New function(identifier,[argument],statement)};
+
+	/* Argument */
+		argument = identifier assign_value? more_assignments* {-> New argument(identifier,[assign_value],[more_assignments])};
+		more_assignments = comma identifier assign_value? {-> New more_assignments(identifier,[assign_value])};
+		assign_value = assign value {-> New assign_value(value.arithmetics)};		
+
+	/* Statement */
+	/* 
+	NOTE: "arithmetics" is used 
+	as BNF's expression and contains 
+	the "expression" defined later 
+	*/
+		statement = {import} import_statement {-> import_statement.statement}
+				| {if} tab* if comparison_lvl_four semi statement {-> New statement.if(comparison_lvl_four,statement)}
+		        | {while} tab* while comparison_lvl_four semi {-> New statement.while(comparison_lvl_four)}
+		        | {for} tab* for [id1]:identifier in [id2]:identifier semi statement {-> New statement.for(id1,id2,statement)} /********** */
+		        | {return} tab* return arithmetics {-> New statement.return(arithmetics)}
+		        | {print} tab* print arithmetics comma_expr* {-> New statement.print(arithmetics,[comma_expr])}
+				/*| {assignments} tab* identifier assignment_operators arithmetics {-> New statement.assignments(identifier,assignment_operators,arithmetics)}*/
+				
+				| {assignment} tab* identifier assign arithmetics {-> New statement.assignment(identifier,arithmetics)}
+				| {minusassignment} tab* identifier minusassign arithmetics {-> New statement.minusassignment(identifier,arithmetics)}
+				| {divassignment} tab* identifier divassign arithmetics {-> New statement.divassignment(identifier,arithmetics)}
+				
+				| {listassignment} tab* identifier l_br [index]:arithmetics r_br assign [value]:arithmetics {-> New statement.listassignment(identifier,index,value)} /********** */
+		        | {assert} tab* assert arithmetics comma_expr? statement {-> New statement.assert(arithmetics,[comma_expr],statement)}
+		        | {call} function_call {-> New statement.call(function_call)};
+				
+	/* Assignment operators */
+		/*assignment_operators = {assign} assign 
+				| {minusassign} minusassign 
+				| {divassign} divassign;*/
+
+	/* Comparison | Level 1 */
+		comparison {-> comparison_lvl_four} = {rule1} [exp1]:arithmetics comparison_operators [exp2]:arithmetics {-> New comparison_lvl_four.rule1(exp1, exp2)} 
+				| {rule2} true {-> New comparison_lvl_four.rule2(true)}
+				| {rule3} false {-> New comparison_lvl_four.rule3(false)};
+
+		comparison_operators{->} = {eq} eq {->}
+				| {noteq} noteq {->}
+				| {less} less {->}
+				| {great} great {->}
+				| {lesseq} lesseq {->}
+				| {greateq} greateq {->};
+
+		/* Level 2 */
+		comparison_lvl_two {-> comparison_lvl_four} = {lvl1} comparison {-> comparison.comparison_lvl_four}
+				| {not} not comparison_lvl_two {-> New comparison_lvl_four.not(comparison_lvl_two.comparison_lvl_four)};
+
+		/* Level 3 */
+		comparison_lvl_three {->comparison_lvl_four} = {lvl2} comparison_lvl_two {->comparison_lvl_two.comparison_lvl_four}
+				| {and} comparison_lvl_three and comparison_lvl_two {-> New comparison_lvl_four.and(comparison_lvl_three.comparison_lvl_four,comparison_lvl_two.comparison_lvl_four)};
+
+		/* Level 4 */
+		comparison_lvl_four = {lvl3} comparison_lvl_three {->comparison_lvl_three.comparison_lvl_four}
+				| {or} comparison_lvl_four or comparison_lvl_three {-> New comparison_lvl_four.or(Null,comparison_lvl_three.comparison_lvl_four)};
+	
+    /* Arithmetics | Level 3 */
+	arithmetics = {rule1} multdivexpr{-> multdivexpr.arithmetics}
+			| {rule2} arithmetics plusminus multdivexpr {-> New arithmetics.plusminus(arithmetics, multdivexpr.arithmetics)};
+
+	/* Level 2 */
+	multdivexpr {-> arithmetics} = {expr} expexpr {-> expexpr.arithmetics}
+			| {multdiv} multdivexpr multdiv expexpr {-> New arithmetics.multdiv(multdivexpr.arithmetics, expexpr.arithmetics)};
+
+	/* Level 1 */
+	expexpr {-> arithmetics} = {expr} expression {-> expression.arithmetics}
+			| {multdiv} expexpr exp expression {-> New arithmetics.exp(expexpr.arithmetics, expression.arithmetics)};
+
+	/* Operators */
+	plusminus{->} = {plus} plus {->} | {minus} minus {->};
+	multdiv{->} = {mult} mult {->} | {div} div {->} | {mod} mod {->};
+
+	/* Expression */
+	expression {-> arithmetics} = {element} element{-> element.arithmetics}
+			| {listcall} identifier l_br arithmetics r_br {-> New arithmetics.listcall(identifier, arithmetics)}
+			| {len} len l_par arithmetics r_par {-> New arithmetics.len(arithmetics)}
+			| {maxmin} maxmin l_par arithmetics comma_expr* r_par {-> New arithmetics.maxmin(arithmetics, [comma_expr])}
+			| {list} l_br arg_list r_br {-> New arithmetics.list(arg_list)};
+
+	/* Element */
+	element{-> arithmetics} = {value} value {-> value.arithmetics}
+			| {identifier} identifier {-> New arithmetics.identifier(identifier)}
+			| {functioncall} function_call {-> New arithmetics.function(function_call)}
+			| {pars} l_par arithmetics r_par {-> New arithmetics.arithmetics(arithmetics)};
+
+	/* Function Call */
+	function_call = identifier l_par arg_list? r_par {-> New function_call(identifier,[arg_list])};
+	arg_list = arithmetics comma_expr* {-> New arg_list(arithmetics, [comma_expr])};
+	comma_expr = comma arithmetics {-> New comma_expr(arithmetics)};
+
+	/* Max min */
+	maxmin{->} = {max} max{->}
+			| {min} min{->};
+	
+	/* Import & module */
+		import_statement{-> statement} = {import} import module as_id? more_modules* {-> New statement.import(module.statement,[as_id],[more_modules.statement])}
+				| {from} from module import identifier as_id? more_ids* {-> New statement.from(module.statement,identifier,[as_id],[more_ids])};
+
+		module{-> statement} = id_dot* identifier {-> New statement.module([id_dot],identifier)};
+		as_id = as identifier {-> New as_id(identifier)};
+		more_modules{-> statement} = comma module as_id? {-> New statement.more_modules(module.statement, [as_id])};
+		more_ids = comma identifier as_id? {-> New more_ids(identifier, [as_id])};
+		id_dot = identifier dot {-> New id_dot(identifier)}; 
+
+	/* Value */
+		value{-> arithmetics} = {methodcall} identifier dot function_call {-> New arithmetics.methodcall(identifier,function_call)}
+			| {number} number {-> New arithmetics.number(number)}
+			| {strlit} string {-> New arithmetics.strlit(string)}
+			| {none} none {-> New arithmetics.none(none)};
+
+	/* Identifier */
+		identifier = id {-> New identifier(id)};
+
+	/* Dot */
+		dot = dott {-> New dot(dott)};
+
+Abstract Syntax Tree
+	goal = commands*;
+
+	commands = {stat} statement
+			| {func} function;
+
+	function = identifier argument* statement;
+
+	/* Argument */
+		argument = identifier assign_value* more_assignments*;
+		more_assignments = identifier assign_value*;
+		assign_value = arithmetics;
+
+	/* Statement */
+		statement = {if} comparison_lvl_four statement
+					| {while} comparison_lvl_four
+					| {for} [id1]:identifier [id2]:identifier statement
+					| {return} arithmetics
+					| {print} arithmetics comma_expr*
+					| {assignment} identifier arithmetics
+					| {minusassignment} identifier arithmetics
+					| {divassignment} identifier arithmetics
+					| {listassignment} identifier [index]:arithmetics [value]:arithmetics
+					| {assert} arithmetics comma_expr* statement
+					| {call} function_call
+					| {import} [l]:statement as_id* [r]:statement*	
+					| {from} statement identifier as_id* more_ids*
+					| {module} id_dot* identifier
+					| {more_modules} statement as_id*;
+
+	/* Comparison */
+		comparison_lvl_four = {not} comparison_lvl_four
+						| {and} [l]:comparison_lvl_four [r]:comparison_lvl_four
+						| {or} [l]:comparison_lvl_four [r]:comparison_lvl_four
+						| {rule1} [expr1]:arithmetics [expr2]:arithmetics
+						| {rule2} true 
+						| {rule3} false;
+
+
+
+	/* Arithmetics */
+	arithmetics = {plusminus} [l]:arithmetics [r]:arithmetics
+				| {multdiv} [l]:arithmetics [r]:arithmetics
+				| {exp} [l]:arithmetics [r]:arithmetics
+				/*| {element} element */
+				| {listcall} identifier arithmetics
+				| {len} arithmetics
+				| {maxmin} arithmetics comma_expr*
+				| {list} arg_list
+				/*|{value} value*/ /* element */
+				| {identifier} identifier
+				| {function} function_call
+				| {arithmetics} arithmetics
+				| {methodcall} identifier function_call /* value */
+				| {number} number
+				| {strlit} string
+				| {none} none;
+
+	/* Function Call */
+	function_call = identifier arg_list*;
+	arg_list = arithmetics comma_expr*;
+	comma_expr = arithmetics;
+			
+	/*module = id_dot* identifier;*/
+	as_id = identifier;
+	/*more_modules = module as_id*;*/
+	more_ids = identifier as_id*;
+	id_dot = identifier;
+
+	/* Identifier */
+	identifier = id;
+
+	/* Dot */
+	dot = dott;
+
+		
