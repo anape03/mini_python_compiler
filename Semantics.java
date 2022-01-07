@@ -22,7 +22,7 @@ public class Semantics {
             // Apply the visitors
             FirstVisitor firstVisitor = new FirstVisitor(variables, functions);
             ast.apply(firstVisitor);
-            SecondVisitor secondVisitor = new SecondVisitor(firstVisitor.getVariables(), firstVisitor.getFunctions());
+            SecondVisitor secondVisitor = new SecondVisitor(firstVisitor.getVariables(), firstVisitor.getFunctions(), firstVisitor.getVariableTypes());
             ast.apply(secondVisitor);
 
         } catch (Exception e) {

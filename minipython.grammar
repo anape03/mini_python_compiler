@@ -141,7 +141,8 @@ Productions
 	
     /* Arithmetics | Level 3 */
 	arithmetics = {rule1} multdivexpr{-> multdivexpr.arithmetics}
-			| {rule2} arithmetics plusminus multdivexpr {-> New arithmetics.plusminus(arithmetics, multdivexpr.arithmetics)};
+			| {rule2} arithmetics plus multdivexpr {-> New arithmetics.plus(arithmetics, multdivexpr.arithmetics)}
+			| {rule3} arithmetics minus multdivexpr {-> New arithmetics.minus(arithmetics, multdivexpr.arithmetics)};
 
 	/* Level 2 */
 	multdivexpr {-> arithmetics} = {expr} expexpr {-> expexpr.arithmetics}
@@ -152,7 +153,7 @@ Productions
 			| {multdiv} expexpr exp expression {-> New arithmetics.exp(expexpr.arithmetics, expression.arithmetics)};
 
 	/* Operators */
-	plusminus{->} = {plus} plus {->} | {minus} minus {->};
+	// plusminus{->} = {plus} plus {->} | {minus} minus {->};
 	multdiv{->} = {mult} mult {->} | {div} div {->} | {mod} mod {->};
 
 	/* Expression */
@@ -240,7 +241,8 @@ Abstract Syntax Tree
 
 
 	/* Arithmetics */
-	arithmetics = {plusminus} [l]:arithmetics [r]:arithmetics
+	arithmetics = {plus} [l]:arithmetics [r]:arithmetics
+				| {minus} [l]:arithmetics [r]:arithmetics
 				| {multdiv} [l]:arithmetics [r]:arithmetics
 				| {exp} [l]:arithmetics [r]:arithmetics
 				/*| {element} element */

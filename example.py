@@ -1,5 +1,8 @@
 #! /usr/bin/env python
 # A miniPython example
-x = "hello world"
-# x = 1
-print x - "hey"
+def add(x, y):
+   return x + y
+
+
+k = "hello world"
+print add(2, k)

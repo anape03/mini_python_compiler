@@ -7,10 +7,13 @@ import minipython.node.*;
 public class SecondVisitor extends DepthFirstAdapter {
     private final Hashtable<String, Node> variables;
     private final Hashtable<String, Node> functions;
+    private final Hashtable<Node, FirstVisitor.VAR_TYPES> variableTypes;
 
-    public SecondVisitor(Hashtable<String, Node> variables, Hashtable<String, Node> functions) {
+    public SecondVisitor(Hashtable<String, Node> variables, Hashtable<String, Node> functions, 
+            Hashtable<Node, FirstVisitor.VAR_TYPES> variableTypes) {
 		this.variables = variables;
 		this.functions = functions;
+        this.variableTypes = variableTypes;
 	}
 
     @Override
@@ -43,7 +46,7 @@ public class SecondVisitor extends DepthFirstAdapter {
                 expectedArguments.add(((AIdentifier) argument.getIdentifier()).getId().getText());
 
                 // Check for default parameters
-                LinkedList value = argument.getAssignValue();
+                LinkedList<AAssignValue> value = argument.getAssignValue();
                 if (value.size() > 0 && defaultIndex == 0) {
                     defaultIndex = expectedArguments.size();
 
@@ -66,8 +69,49 @@ public class SecondVisitor extends DepthFirstAdapter {
         }
 
         // Compare the arguments from the definition with the ones from the call
-        if (givenArguments.size() < defaultIndex || givenArguments.size() > expectedArguments.size()) {
+        if (givenArguments.size() < defaultIndex - 1 || givenArguments.size() > expectedArguments.size()) {
             FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.WRONG_PARAMS);
+        }
+
+        // ********************************* \\
+        FirstVisitor.VAR_TYPES type;
+        if (argumentsCall.size() > 0) {
+            LinkedList<AMoreAssignments> params = arguments.get(0).getMoreAssignments();
+            LinkedList<ACommaExpr> args = argumentsCall.get(0).getCommaExpr();
+            for (int i = 0; i < expectedArguments.size(); i++) {
+                if (i < givenArguments.size()) {
+                    // Get the argument's type from the function's call
+                    if (i == 0) {
+                        System.out.println("in normal zero");  // -0
+                        type = variableTypes.get(givenArguments.get(i));
+                        variableTypes.put(arguments.get(0).getIdentifier(), type);
+                    } else {
+                        System.out.println("in normal no zero");  // -0
+                        type = variableTypes.get(args.get(i - 1).getArithmetics());
+                        variableTypes.put(params.get(i - 1).getIdentifier(), type);
+                    }
+
+                } else {  // Default values included
+                    System.out.println("in default no zero");  // -0
+                    // Use the default value to set the variable's type
+                    AMoreAssignments value = params.get(i - 1);
+                    type = variableTypes.get(((LinkedList<AAssignValue>) value.getAssignValue()).get(0).getArithmetics());
+                    variableTypes.put(params.get(i - 1).getIdentifier(), type);
+                }
+            }
+        } else if (arguments.size() > 0) {  // Only default parameters present
+            LinkedList<AAssignValue> firstValue = arguments.get(0).getAssignValue();
+            if (firstValue.size() > 0) {
+                type = variableTypes.get(firstValue.get(0).getArithmetics());
+                variableTypes.put(arguments.get(0).getIdentifier(), type);
+            }
+
+            LinkedList<AAssignValue> value;
+            for (AMoreAssignments param : (LinkedList<AMoreAssignments>) arguments.get(0).getMoreAssignments()) {
+                value = param.getAssignValue();
+                type = variableTypes.get(value.get(0).getArithmetics());
+                variableTypes.put(param.getIdentifier(), type);
+            }
         }
     }
 
@@ -78,5 +122,9 @@ public class SecondVisitor extends DepthFirstAdapter {
 
     public Hashtable<String, Node> getFunctions() {
         return functions;
+    }
+
+    public Hashtable<Node, FirstVisitor.VAR_TYPES> getVariableTypes() {
+        return variableTypes;
     }
 }
