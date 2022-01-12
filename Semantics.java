@@ -16,14 +16,17 @@ public class Semantics {
             // Hash tables for storing declared variables and functions
             Hashtable<String, Node> variables =  new Hashtable<>();
             Hashtable<String, Node> functions =  new Hashtable<>();
+            Hashtable<Node, FirstVisitor.VAR_TYPES> variableTypes = new Hashtable<>();
 
             Start ast = parser.parse();
 
             // Apply the visitors
-            FirstVisitor firstVisitor = new FirstVisitor(variables, functions);
+            FirstVisitor firstVisitor = new FirstVisitor(variables, functions, variableTypes);
             ast.apply(firstVisitor);
             SecondVisitor secondVisitor = new SecondVisitor(firstVisitor.getVariables(), firstVisitor.getFunctions(), firstVisitor.getVariableTypes());
             ast.apply(secondVisitor);
+            FirstVisitor thirdVisitor = new FirstVisitor(secondVisitor.getVariables(), secondVisitor.getFunctions(), secondVisitor.getVariableTypes());
+            ast.apply(thirdVisitor);
 
         } catch (Exception e) {
             System.err.println(e);

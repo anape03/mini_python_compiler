@@ -74,6 +74,7 @@ public class SecondVisitor extends DepthFirstAdapter {
         }
 
         // ********************************* \\
+        // Check that the correct number of parameters has been given
         FirstVisitor.VAR_TYPES type;
         if (argumentsCall.size() > 0) {
             LinkedList<AMoreAssignments> params = arguments.get(0).getMoreAssignments();
@@ -113,6 +114,10 @@ public class SecondVisitor extends DepthFirstAdapter {
                 variableTypes.put(param.getIdentifier(), type);
             }
         }
+
+        // ********************************* \\
+        // Find the function's return type
+        
     }
 
     // Getters

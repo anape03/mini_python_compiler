@@ -21,15 +21,18 @@ public class FirstVisitor extends DepthFirstAdapter {
 	}
 
 	public static enum VAR_TYPES {
-		NUMBER,
+		INTEGER,
+		DOUBLE,
 		STRING,
 		NONE,
+		UNKNOWN,
 	}
 
-	public FirstVisitor(Hashtable<String, Node> variables, Hashtable<String, Node> functions) {
+	public FirstVisitor(Hashtable<String, Node> variables, Hashtable<String, Node> functions, 
+			Hashtable<Node, VAR_TYPES> variableTypes) {
 		this.variables = variables;
 		this.functions = functions;
-		this.variableTypes = new Hashtable<>();
+		this.variableTypes = variableTypes;
 	}
 
 	@Override
@@ -69,6 +72,7 @@ public class FirstVisitor extends DepthFirstAdapter {
 			|| parent instanceof AArgument) {
 			// Create a new variable
 			variables.put(name, node);
+			variableTypes.put(node, VAR_TYPES.UNKNOWN);
 
 		} else if (parent instanceof AFunction) {
 			// Create a new function
@@ -82,6 +86,18 @@ public class FirstVisitor extends DepthFirstAdapter {
 			if (name.equals(id1.getId().getText())) {
 				variables.put(name, node);
 			}
+		}
+	}
+
+	@Override
+	public void outAFunction(AFunction node) {
+		// Retrieve the function's return type from it's return statement(if it exists)
+		if (node.getStatement() instanceof AReturnStatement) {
+			PArithmetics arithmetics = ((AReturnStatement) node.getStatement()).getArithmetics();
+			variableTypes.put(node.getIdentifier(), variableTypes.get(arithmetics));
+
+		} else {  // Otheriwse None return type
+			variableTypes.put(node.getIdentifier(), VAR_TYPES.NONE);
 		}
 	}
 
@@ -111,7 +127,7 @@ public class FirstVisitor extends DepthFirstAdapter {
 
 	@Override
 	public void outANumberArithmetics(ANumberArithmetics node) {
-		variableTypes.put(node, VAR_TYPES.NUMBER);
+		variableTypes.put(node, getNumberSubtype(node.getNumber()));
 	}
 
 	@Override
@@ -126,12 +142,12 @@ public class FirstVisitor extends DepthFirstAdapter {
 
 	@Override
 	public void outALenArithmetics(ALenArithmetics node) {
-		variableTypes.put(node, VAR_TYPES.NUMBER);
+		variableTypes.put(node, VAR_TYPES.INTEGER);
 	}
 
 	@Override
 	public void outAMaxminArithmetics(AMaxminArithmetics node) {
-		variableTypes.put(node, VAR_TYPES.NUMBER);
+		variableTypes.put(node, VAR_TYPES.DOUBLE);
 	}
 
 	@Override
@@ -155,14 +171,29 @@ public class FirstVisitor extends DepthFirstAdapter {
 		// Find the class type of left and right children
 		Class<?> lClass = node.getL().getClass();
 		Class<?> rClass = node.getR().getClass();
+		VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+		VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+		// AIdentifierArithmetics inserts Aidentifier node and not itself
+		// Hence, the AIdentifier's type should be retrieved
+		if (node.getL() instanceof AIdentifierArithmetics) {
+			lType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+		}
+
+		if (node.getR() instanceof AIdentifierArithmetics) {
+			rType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+		}
 
 		// All children must return a number for the expression to be valid
-		if (variableTypes.get(lClass.cast(node.getL())) == VAR_TYPES.NUMBER &&
-				variableTypes.get(rClass.cast(node.getR())) == VAR_TYPES.NUMBER) {
-			variableTypes.put(node, VAR_TYPES.NUMBER);
-		} else if (variableTypes.get(lClass.cast(node.getL())) != VAR_TYPES.NUMBER) {
-			printError(node.getL(), ERROR_TYPES.TYPE_MISSMATCH);
-		} else if (variableTypes.get(rClass.cast(node.getR())) != VAR_TYPES.NUMBER) {
+		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+			variableTypes.put(node, VAR_TYPES.UNKNOWN);
+		} else if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
+			variableTypes.put(node, VAR_TYPES.INTEGER);
+		} else if (isNumber(lType) && isNumber(rType)) {
+			variableTypes.put(node, VAR_TYPES.DOUBLE);
+		} else {
 			printError(node.getR(), ERROR_TYPES.TYPE_MISSMATCH);
 		}
 	}
@@ -172,19 +203,26 @@ public class FirstVisitor extends DepthFirstAdapter {
 		// Find the class type of left and right children
 		Class<?> lClass = node.getL().getClass();
 		Class<?> rClass = node.getR().getClass();
+		VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+		VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+		if (node.getL() instanceof AIdentifierArithmetics) {
+			lType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+		}
+
+		if (node.getR() instanceof AIdentifierArithmetics) {
+			rType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+		}
 
 		// The childrens' types must match
-		if (variableTypes.get(lClass.cast(node.getL())) == variableTypes.get(rClass.cast(node.getR())) &&
-				variableTypes.get(lClass.cast(node.getL())) != VAR_TYPES.NONE) {
-			// TODO: AIdentifierArithmetics inserts Aidentifier node and not itself
-			// Hence, the AIdentifier's type should be retrieved
-			if (node.getL() instanceof AIdentifierArithmetics) {
-				VAR_TYPES type = findVariableType(((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
-				System.out.println(type);  // -0
-				variableTypes.put(node, type);
-			} else {
-				variableTypes.put(node, variableTypes.get(lClass.cast(node.getL())));
-			}
+		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+			variableTypes.put(node, VAR_TYPES.UNKNOWN);
+		} else if (lType == rType && lType != VAR_TYPES.NONE) {
+			variableTypes.put(node, lType);
+		} else if (isNumber(lType) && isNumber(rType)) {
+			variableTypes.put(node, VAR_TYPES.DOUBLE);
 		} else {
 			printError(node, ERROR_TYPES.ADD_TYPE_MISSMATCH);
 		}
@@ -195,31 +233,87 @@ public class FirstVisitor extends DepthFirstAdapter {
 		// Find the class type of left and right children
 		Class<?> lClass = node.getL().getClass();
 		Class<?> rClass = node.getR().getClass();
+		VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+		VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
 
-		// All children must return a number for the expression to be valid
-		if (variableTypes.get(lClass.cast(node.getL())) == VAR_TYPES.NUMBER &&
-				variableTypes.get(rClass.cast(node.getR())) == VAR_TYPES.NUMBER) {
-			variableTypes.put(node, VAR_TYPES.NUMBER);
+		if (node.getL() instanceof AIdentifierArithmetics) {
+			lType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+		}
+
+		if (node.getR() instanceof AIdentifierArithmetics) {
+			rType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+		}
+
+		if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
+			variableTypes.put(node, VAR_TYPES.INTEGER);
+		} else if (lType == VAR_TYPES.STRING || rType == VAR_TYPES.STRING) {
+			printError(node, ERROR_TYPES.MINUS_TYPE_MISSMATCH);
+		} else if (lType == VAR_TYPES.DOUBLE || rType == VAR_TYPES.DOUBLE) {
+			variableTypes.put(node, VAR_TYPES.DOUBLE);
 		} else {
 			printError(node, ERROR_TYPES.MINUS_TYPE_MISSMATCH);
 		}
 	}
 
 	@Override
-	public void outAMultdivArithmetics(AMultdivArithmetics node) {
+	public void outAMultArithmetics(AMultArithmetics node) {
 		// Same as outAExpArithmetics
 		// Find the class type of left and right children
 		Class<?> lClass = node.getL().getClass();
 		Class<?> rClass = node.getR().getClass();
+		VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+		VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+		if (node.getL() instanceof AIdentifierArithmetics) {
+			lType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+		}
+
+		if (node.getR() instanceof AIdentifierArithmetics) {
+			rType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+		}
 
 		// All children must return a number for the expression to be valid
-		if (variableTypes.get(lClass.cast(node.getL())) == VAR_TYPES.NUMBER &&
-				variableTypes.get(rClass.cast(node.getR())) == VAR_TYPES.NUMBER) {
-			variableTypes.put(node, VAR_TYPES.NUMBER);
-		} else if (variableTypes.get(lClass.cast(node.getL())) != VAR_TYPES.NUMBER) {
-			printError(node.getL(), ERROR_TYPES.TYPE_MISSMATCH);
-		} else if (variableTypes.get(rClass.cast(node.getR())) != VAR_TYPES.NUMBER) {
-			printError(node.getR(), ERROR_TYPES.TYPE_MISSMATCH);
+		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+			variableTypes.put(node, VAR_TYPES.UNKNOWN);
+		} else if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
+			variableTypes.put(node, VAR_TYPES.INTEGER);
+		} else if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.STRING
+				|| lType == VAR_TYPES.STRING && rType == VAR_TYPES.INTEGER) {
+			variableTypes.put(node, VAR_TYPES.STRING);
+		} else if (isNumber(lType) && isNumber(rType)) {
+			variableTypes.put(node, VAR_TYPES.DOUBLE);
+		} else {
+			printError(node, ERROR_TYPES.TYPE_MISSMATCH);
+		}
+	}
+
+	@Override
+	public void outADivArithmetics(ADivArithmetics node) {
+		// Same as outAExpArithmetics
+		// Find the class type of left and right children
+		Class<?> lClass = node.getL().getClass();
+		Class<?> rClass = node.getR().getClass();
+		VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+		VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+		if (node.getL() instanceof AIdentifierArithmetics) {
+			lType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+		}
+
+		if (node.getR() instanceof AIdentifierArithmetics) {
+			rType = findVariableType(
+					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+		}
+
+		if (isNumber(lType) && isNumber(rType)) {
+			variableTypes.put(node, VAR_TYPES.DOUBLE);
+		} else {
+			printError(node, ERROR_TYPES.MINUS_TYPE_MISSMATCH);
 		}
 	}
 
@@ -278,16 +372,29 @@ public class FirstVisitor extends DepthFirstAdapter {
 
 	// Given a token's name find the matching variable's type
 	// Works only for AIdentifier
-	public VAR_TYPES findVariableType(String token) {
+	private VAR_TYPES findVariableType(String token) {
 		for (Node node : variableTypes.keySet()) {
 			if (node instanceof AIdentifier) {
-				if (token.equals(((AIdentifier) node).getId().getText())) {
+				if (token.trim().equals(((AIdentifier) node).getId().getText().trim())) {
 					return variableTypes.get(node);
 				}
 			}
 		}
 
 		return null;
+	}
+
+	// Find the number's subtype
+	private VAR_TYPES getNumberSubtype(PNumber number) {
+		if (number instanceof AIntNumber) {
+			return VAR_TYPES.INTEGER;
+		} else {
+			return VAR_TYPES.DOUBLE;
+		}
+	}
+
+	private boolean isNumber(VAR_TYPES type) {
+		return type == VAR_TYPES.INTEGER || type == VAR_TYPES.DOUBLE;
 	}
 
 	// Getters

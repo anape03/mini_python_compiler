@@ -71,7 +71,8 @@ Tokens
 	or = 'or';
 	none = 'None';
 	id = (letter | underscore)(letter | digit | underscore)*;
-	number = (digit+) | (digit+ dot digit+);	
+	int = digit+;
+	double = digit+ dot digit+;
 	string = (dquote (space | letter)* dquote) | (squote (space | letter)* squote);
 
 Ignored Tokens
@@ -146,7 +147,8 @@ Productions
 
 	/* Level 2 */
 	multdivexpr {-> arithmetics} = {expr} expexpr {-> expexpr.arithmetics}
-			| {multdiv} multdivexpr multdiv expexpr {-> New arithmetics.multdiv(multdivexpr.arithmetics, expexpr.arithmetics)};
+			| {mult} multdivexpr mult expexpr {-> New arithmetics.mult(multdivexpr.arithmetics, expexpr.arithmetics)}
+			| {div} multdivexpr div expexpr {-> New arithmetics.div(multdivexpr.arithmetics, expexpr.arithmetics)};
 
 	/* Level 1 */
 	expexpr {-> arithmetics} = {expr} expression {-> expression.arithmetics}
@@ -154,7 +156,7 @@ Productions
 
 	/* Operators */
 	// plusminus{->} = {plus} plus {->} | {minus} minus {->};
-	multdiv{->} = {mult} mult {->} | {div} div {->} | {mod} mod {->};
+	// multdiv{->} = {mult} mult {->} | {div} div {->} | {mod} mod {->};
 
 	/* Expression */
 	expression {-> arithmetics} = {element} element{-> element.arithmetics}
@@ -200,6 +202,9 @@ Productions
 	/* Dot */
 		dot = dott {-> New dot(dott)};
 
+	/* Number */
+		number = {int} int{-> New number.int(int)} | {double} double{-> New number.double(double)};
+
 Abstract Syntax Tree
 	goal = commands*;
 
@@ -243,7 +248,8 @@ Abstract Syntax Tree
 	/* Arithmetics */
 	arithmetics = {plus} [l]:arithmetics [r]:arithmetics
 				| {minus} [l]:arithmetics [r]:arithmetics
-				| {multdiv} [l]:arithmetics [r]:arithmetics
+				| {mult} [l]:arithmetics [r]:arithmetics
+				| {div} [l]:arithmetics [r]:arithmetics
 				| {exp} [l]:arithmetics [r]:arithmetics
 				/*| {element} element */
 				| {listcall} identifier arithmetics
@@ -276,4 +282,5 @@ Abstract Syntax Tree
 	/* Dot */
 	dot = dott;
 
-		
+	/* Number */
+	number = {int} int | {double} double;
