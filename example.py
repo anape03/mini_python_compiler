@@ -22,12 +22,12 @@
 # x="hello world"
 # print x+2
 
-def add(x, y=2):
-   return 1
-# k="hello world"
-k = 3
-print add(2, k) + 2
-# print add('hi', 'hey')
+# def add(x, y=2):
+#    print x + y 
+# # k="hello world"
+# k = 3
+# print add(2, k)
+# # print add('hi', 'hey')
 
 # 5
 

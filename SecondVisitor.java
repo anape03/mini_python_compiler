@@ -83,17 +83,14 @@ public class SecondVisitor extends DepthFirstAdapter {
                 if (i < givenArguments.size()) {
                     // Get the argument's type from the function's call
                     if (i == 0) {
-                        System.out.println("in normal zero");  // -0
                         type = variableTypes.get(givenArguments.get(i));
                         variableTypes.put(arguments.get(0).getIdentifier(), type);
                     } else {
-                        System.out.println("in normal no zero");  // -0
                         type = variableTypes.get(args.get(i - 1).getArithmetics());
                         variableTypes.put(params.get(i - 1).getIdentifier(), type);
                     }
 
                 } else {  // Default values included
-                    System.out.println("in default no zero");  // -0
                     // Use the default value to set the variable's type
                     AMoreAssignments value = params.get(i - 1);
                     type = variableTypes.get(((LinkedList<AAssignValue>) value.getAssignValue()).get(0).getArithmetics());
@@ -117,7 +114,237 @@ public class SecondVisitor extends DepthFirstAdapter {
 
         // ********************************* \\
         // Find the function's return type
-        
+        // if (function.getStatement() instanceof AReturnStatement) {
+        //     caseAReturnStatement((AReturnStatement) function.getStatement());
+        // }
+        if (function.getStatement() != null) {
+            function.getStatement().apply(this);
+        }
+    }
+
+    // public void customCaseAReturnStatement(AReturnStatement node) {
+    //     inAReturnStatement(node);
+    //     if (node.getArithmetics() != null) {
+    //         node.getArithmetics().apply(this);
+    //     }
+    //     outAReturnStatement(node);
+    // }
+
+    @Override
+    public void outANumberArithmetics(ANumberArithmetics node) {
+        variableTypes.put(node, FirstVisitor.getNumberSubtype(node.getNumber()));
+    }
+
+    @Override
+    public void outAStrlitArithmetics(AStrlitArithmetics node) {
+        variableTypes.put(node, FirstVisitor.VAR_TYPES.STRING);
+    }
+
+    @Override
+    public void outANoneArithmetics(ANoneArithmetics node) {
+        variableTypes.put(node, FirstVisitor.VAR_TYPES.NONE);
+    }
+
+    @Override
+    public void outALenArithmetics(ALenArithmetics node) {
+        variableTypes.put(node, FirstVisitor.VAR_TYPES.INTEGER);
+    }
+
+    @Override
+    public void outAMaxminArithmetics(AMaxminArithmetics node) {
+        variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
+    }
+
+    @Override
+    public void outAIdentifierArithmetics(AIdentifierArithmetics node) {
+        String id = ((AIdentifier) node.getIdentifier()).getId().getText().trim();
+
+        // Iterate all varibles present and find a match
+        for (Node n : variableTypes.keySet()) {
+            if (n instanceof AIdentifier) {
+                if (id.equals(((AIdentifier) n).getId().getText().trim())) {
+                    // Same type as defined in the assignment statement
+                    variableTypes.put(node, variableTypes.get(n));
+                    break;
+                }
+            }
+        }
+    }
+
+    @Override
+    public void outAExpArithmetics(AExpArithmetics node) {
+        // Find the class type of left and right children
+        Class<?> lClass = node.getL().getClass();
+        Class<?> rClass = node.getR().getClass();
+        FirstVisitor.VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+        FirstVisitor.VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+        // AIdentifierArithmetics inserts Aidentifier node and not itself
+        // Hence, the AIdentifier's type should be retrieved
+        if (node.getL() instanceof AIdentifierArithmetics) {
+            lType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+        }
+
+        if (node.getR() instanceof AIdentifierArithmetics) {
+            rType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+        }
+
+        // All children must return a number for the expression to be valid
+        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
+        } else if (lType == FirstVisitor.VAR_TYPES.INTEGER && rType == FirstVisitor.VAR_TYPES.INTEGER) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.INTEGER);
+        } else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
+        } else {
+            FirstVisitor.printError(node.getR(), FirstVisitor.ERROR_TYPES.TYPE_MISSMATCH);
+        }
+    }
+
+    @Override
+    public void outAPlusArithmetics(APlusArithmetics node) {
+        // Find the class type of left and right children
+        Class<?> lClass = node.getL().getClass();
+        Class<?> rClass = node.getR().getClass();
+        FirstVisitor.VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+        FirstVisitor.VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+        if (node.getL() instanceof AIdentifierArithmetics) {
+            lType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+        }
+
+        if (node.getR() instanceof AIdentifierArithmetics) {
+            rType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+        }
+
+        // The childrens' types must match
+        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
+        } else if (lType == rType && lType != FirstVisitor.VAR_TYPES.NONE) {
+            variableTypes.put(node, lType);
+        } else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
+        } else {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.ADD_TYPE_MISSMATCH);
+        }
+    }
+
+    @Override
+    public void outAMinusArithmetics(AMinusArithmetics node) {
+        // Find the class type of left and right children
+        Class<?> lClass = node.getL().getClass();
+        Class<?> rClass = node.getR().getClass();
+        FirstVisitor.VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+        FirstVisitor.VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+        if (node.getL() instanceof AIdentifierArithmetics) {
+            lType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+        }
+
+        if (node.getR() instanceof AIdentifierArithmetics) {
+            rType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+        }
+
+        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+			variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
+        } else if (lType == FirstVisitor.VAR_TYPES.INTEGER && rType == FirstVisitor.VAR_TYPES.INTEGER) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.INTEGER);
+        } else if (lType == FirstVisitor.VAR_TYPES.STRING || rType == FirstVisitor.VAR_TYPES.STRING) {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.MINUS_TYPE_MISSMATCH);
+        } else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
+        } else {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.MINUS_TYPE_MISSMATCH);
+        }
+    }
+
+    @Override
+    public void outAMultArithmetics(AMultArithmetics node) {
+        // Same as outAExpArithmetics
+        // Find the class type of left and right children
+        Class<?> lClass = node.getL().getClass();
+        Class<?> rClass = node.getR().getClass();
+        FirstVisitor.VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+        FirstVisitor.VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+        if (node.getL() instanceof AIdentifierArithmetics) {
+            lType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+        }
+
+        if (node.getR() instanceof AIdentifierArithmetics) {
+            rType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+        }
+
+        // All children must return a number for the expression to be valid
+        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
+        } else if (lType == FirstVisitor.VAR_TYPES.INTEGER && rType == FirstVisitor.VAR_TYPES.INTEGER) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.INTEGER);
+        } else if (lType == FirstVisitor.VAR_TYPES.INTEGER && rType == FirstVisitor.VAR_TYPES.STRING
+                || lType == FirstVisitor.VAR_TYPES.STRING && rType == FirstVisitor.VAR_TYPES.INTEGER) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.STRING);
+        } else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
+        } else {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.TYPE_MISSMATCH);
+        }
+    }
+
+    @Override
+    public void outADivArithmetics(ADivArithmetics node) {
+        // Same as outAExpArithmetics
+        // Find the class type of left and right children
+        Class<?> lClass = node.getL().getClass();
+        Class<?> rClass = node.getR().getClass();
+        FirstVisitor.VAR_TYPES lType = variableTypes.get(lClass.cast(node.getL()));
+        FirstVisitor.VAR_TYPES rType = variableTypes.get(rClass.cast(node.getR()));
+
+        if (node.getL() instanceof AIdentifierArithmetics) {
+            lType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getL()).getIdentifier()).getId().getText());
+        }
+
+        if (node.getR() instanceof AIdentifierArithmetics) {
+            rType = findVariableType(
+                    ((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
+        }
+
+        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
+        } else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
+            variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
+        } else {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.TYPE_MISSMATCH);
+        }
+    }
+
+    @Override
+    public void outAFunctionArithmetics(AFunctionArithmetics node) {
+        // Find the function's type using it's identifier
+        String id = ((AIdentifier) ((AFunctionCall) node.getFunctionCall()).getIdentifier()).getId().getText();
+        FirstVisitor.VAR_TYPES type = findVariableType(id);
+        variableTypes.put(node, type);
+    }
+
+    // Helper methods
+    private FirstVisitor.VAR_TYPES findVariableType(String token) {
+        for (Node node : variableTypes.keySet()) {
+            if (node instanceof AIdentifier) {
+                if (token.trim().equals(((AIdentifier) node).getId().getText().trim())) {
+                    return variableTypes.get(node);
+                }
+            }
+        }
+
+        return null;
     }
 
     // Getters

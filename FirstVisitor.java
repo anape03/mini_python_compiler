@@ -246,11 +246,13 @@ public class FirstVisitor extends DepthFirstAdapter {
 					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
 		}
 
-		if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
+		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+			variableTypes.put(node, VAR_TYPES.UNKNOWN);
+		} else if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
 			variableTypes.put(node, VAR_TYPES.INTEGER);
 		} else if (lType == VAR_TYPES.STRING || rType == VAR_TYPES.STRING) {
 			printError(node, ERROR_TYPES.MINUS_TYPE_MISSMATCH);
-		} else if (lType == VAR_TYPES.DOUBLE || rType == VAR_TYPES.DOUBLE) {
+		} else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
 			variableTypes.put(node, VAR_TYPES.DOUBLE);
 		} else {
 			printError(node, ERROR_TYPES.MINUS_TYPE_MISSMATCH);
@@ -292,6 +294,14 @@ public class FirstVisitor extends DepthFirstAdapter {
 	}
 
 	@Override
+	public void outAFunctionArithmetics(AFunctionArithmetics node) {
+		// Find the function's type using it's identifier
+		String id = ((AIdentifier) ((AFunctionCall) node.getFunctionCall()).getIdentifier()).getId().getText();
+		VAR_TYPES type = findVariableType(id);
+		variableTypes.put(node, type);
+	}
+
+	@Override
 	public void outADivArithmetics(ADivArithmetics node) {
 		// Same as outAExpArithmetics
 		// Find the class type of left and right children
@@ -310,10 +320,12 @@ public class FirstVisitor extends DepthFirstAdapter {
 					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
 		}
 
-		if (isNumber(lType) && isNumber(rType)) {
+		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+			variableTypes.put(node, VAR_TYPES.UNKNOWN);
+		} else if (isNumber(lType) && isNumber(rType)) {
 			variableTypes.put(node, VAR_TYPES.DOUBLE);
 		} else {
-			printError(node, ERROR_TYPES.MINUS_TYPE_MISSMATCH);
+			printError(node, ERROR_TYPES.TYPE_MISSMATCH);
 		}
 	}
 
@@ -385,7 +397,7 @@ public class FirstVisitor extends DepthFirstAdapter {
 	}
 
 	// Find the number's subtype
-	private VAR_TYPES getNumberSubtype(PNumber number) {
+	public static VAR_TYPES getNumberSubtype(PNumber number) {
 		if (number instanceof AIntNumber) {
 			return VAR_TYPES.INTEGER;
 		} else {
@@ -393,7 +405,7 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 	}
 
-	private boolean isNumber(VAR_TYPES type) {
+	public static boolean isNumber(VAR_TYPES type) {
 		return type == VAR_TYPES.INTEGER || type == VAR_TYPES.DOUBLE;
 	}
 

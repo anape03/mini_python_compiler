@@ -25,8 +25,6 @@ public class Semantics {
             ast.apply(firstVisitor);
             SecondVisitor secondVisitor = new SecondVisitor(firstVisitor.getVariables(), firstVisitor.getFunctions(), firstVisitor.getVariableTypes());
             ast.apply(secondVisitor);
-            FirstVisitor thirdVisitor = new FirstVisitor(secondVisitor.getVariables(), secondVisitor.getFunctions(), secondVisitor.getVariableTypes());
-            ast.apply(thirdVisitor);
 
         } catch (Exception e) {
             System.err.println(e);
