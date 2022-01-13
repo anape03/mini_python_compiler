@@ -9,6 +9,7 @@ public class FirstVisitor extends DepthFirstAdapter {
 	private final Hashtable<String, Node> functions;
 
 	private final Hashtable<Node, VAR_TYPES> variableTypes;
+	private final List<Function> functionList;
 
 	public static enum ERROR_TYPES {
 		UNDECLARED_VARIABLE,
@@ -18,6 +19,7 @@ public class FirstVisitor extends DepthFirstAdapter {
 		TYPE_MISSMATCH,
 		ADD_TYPE_MISSMATCH,
 		MINUS_TYPE_MISSMATCH,
+		IDENTICAL_FUNCTIONS,
 	}
 
 	public static enum VAR_TYPES {
@@ -33,6 +35,21 @@ public class FirstVisitor extends DepthFirstAdapter {
 		this.variables = variables;
 		this.functions = functions;
 		this.variableTypes = variableTypes;
+		this.functionList = new ArrayList<>();
+	}
+
+	@Override
+	public void outAGoal(AGoal node) {
+		// Check for functions with identical names and parameters' names
+		for (Function function : functionList) {
+			for (Function f : functionList) {
+				if (function != f && function.getName().equals(f.getName())) {
+					if (function.getTotalParams() == f.getTotalParams() || function.getParams() == f.getParams()) {
+						printError(node, ERROR_TYPES.IDENTICAL_FUNCTIONS, function.getName());
+					}
+				}
+			}
+		}
 	}
 
 	@Override
@@ -87,6 +104,37 @@ public class FirstVisitor extends DepthFirstAdapter {
 				variables.put(name, node);
 			}
 		}
+	}
+
+	// Make sure no two functions share the same name and parameters' name
+	@Override
+	@SuppressWarnings("unchecked")
+	public void inAFunction(AFunction node) {
+		// Get the function's name
+		String name = ((AIdentifier) node.getIdentifier()).getId().getText();
+		Function function = new Function(name);
+
+		// Get the function's parameter count
+		LinkedList<AArgument> arguments = node.getArgument();
+		if (arguments.size() > 0) {
+			if (arguments.get(0).getAssignValue().size() > 0) {
+				function.setDefaultParams(1);
+			} else {
+				function.setParams(1);
+			}
+
+			for (AMoreAssignments argument : ((LinkedList<AMoreAssignments>) arguments.get(0).getMoreAssignments())) {
+				// Check for default parameters
+				LinkedList<AAssignValue> value = argument.getAssignValue();
+				if (value.size() > 0) {
+					function.setDefaultParams(function.getDefaultParams() + 1);
+				} else {
+					function.setParams(function.getParams() + 1);
+				}
+			}
+		}
+
+		functionList.add(function);
 	}
 
 	@Override
@@ -329,12 +377,6 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 	}
 
-	// Identify the arguments' types 
-	@Override
-	public void outAArgList(AArgList node) {
-		
-	}
-
 	// Helper methods
 	// Print the appropriate error message
 	public static void printError(Node node, ERROR_TYPES type) {
@@ -374,8 +416,28 @@ public class FirstVisitor extends DepthFirstAdapter {
 				message += ": Variable type missmatch in substraction.";
 				break;
 
+			case IDENTICAL_FUNCTIONS:
+				break;
+
 			default:
-				message += "]: Unknown error.";
+				message += ": Unknown error.";
+		}
+
+		if (!(node instanceof AGoal)) {
+			System.err.println(message);
+			System.exit(-1);
+		}
+	}
+
+	public static void printError(Node node, ERROR_TYPES type, String name) {
+		String message = "Error";
+		switch (type) {
+			case IDENTICAL_FUNCTIONS:
+				message += ": Function \'" + name + "\' already defined with same parameter number.";
+				break;
+
+			default:
+				message += ": Unknown error.";
 		}
 
 		System.err.println(message);
@@ -420,5 +482,9 @@ public class FirstVisitor extends DepthFirstAdapter {
 
 	public Hashtable<Node, VAR_TYPES> getVariableTypes() {
 		return variableTypes;
+	}
+
+	public List<Function> getFunctionList() {
+		return functionList;
 	}
 }

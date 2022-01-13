@@ -23,7 +23,7 @@
 # print x+2
 
 # def add(x, y=2):
-#    print x + y 
+#    print x + y
 # # k="hello world"
 # k = 3
 # print add(2, k)
@@ -37,7 +37,31 @@
 # print add(2,1)+2
 
 # 7
-# def add(x,y):
-# def add(x,y,z=1)
-# def add(x,y,z):
-# def add(x,y,z=1)
+# def add(x, y):
+#     print x
+
+
+# def add(x, y, z=1):
+#     print x
+
+# *****************
+
+# def add(x, y, z):
+#     print x
+
+
+# def add(x, y, z=1):
+#     print x
+
+# *****************
+
+# def add(x, y):
+#     print x
+
+
+# def add(x, y, z):
+#     print x
+
+
+# def add(x, y):
+#     print y
