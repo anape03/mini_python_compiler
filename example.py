@@ -30,6 +30,11 @@
 # # print add('hi', 'hey')
 
 # 5
+# print 3 + None
+# x = 1
+# print x - None
+# print 2 ** 3 / None
+# print None * None
 
 # 6
 # def add(x,y):

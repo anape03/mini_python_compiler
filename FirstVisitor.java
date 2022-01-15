@@ -19,6 +19,7 @@ public class FirstVisitor extends DepthFirstAdapter {
 		TYPE_MISSMATCH,
 		ADD_TYPE_MISSMATCH,
 		MINUS_TYPE_MISSMATCH,
+		NONE_OPERATION,
 		IDENTICAL_FUNCTIONS,
 	}
 
@@ -235,7 +236,9 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 
 		// All children must return a number for the expression to be valid
-		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+		if (rType == VAR_TYPES.NONE || lType == VAR_TYPES.NONE) {
+			printError(node, ERROR_TYPES.NONE_OPERATION);
+		} else if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
 			variableTypes.put(node, VAR_TYPES.UNKNOWN);
 		} else if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
 			variableTypes.put(node, VAR_TYPES.INTEGER);
@@ -265,9 +268,11 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 
 		// The childrens' types must match
-		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+		if (rType == VAR_TYPES.NONE || lType == VAR_TYPES.NONE) {
+			printError(node, ERROR_TYPES.NONE_OPERATION);
+		} else if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
 			variableTypes.put(node, VAR_TYPES.UNKNOWN);
-		} else if (lType == rType && lType != VAR_TYPES.NONE) {
+		} else if (lType == rType) {
 			variableTypes.put(node, lType);
 		} else if (isNumber(lType) && isNumber(rType)) {
 			variableTypes.put(node, VAR_TYPES.DOUBLE);
@@ -294,7 +299,9 @@ public class FirstVisitor extends DepthFirstAdapter {
 					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
 		}
 
-		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+		if (rType == VAR_TYPES.NONE || lType == VAR_TYPES.NONE) {
+			printError(node, ERROR_TYPES.NONE_OPERATION);
+		} else if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
 			variableTypes.put(node, VAR_TYPES.UNKNOWN);
 		} else if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
 			variableTypes.put(node, VAR_TYPES.INTEGER);
@@ -327,7 +334,9 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 
 		// All children must return a number for the expression to be valid
-		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+		if (rType == VAR_TYPES.NONE || lType == VAR_TYPES.NONE) {
+			printError(node, ERROR_TYPES.NONE_OPERATION);
+		} else if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
 			variableTypes.put(node, VAR_TYPES.UNKNOWN);
 		} else if (lType == VAR_TYPES.INTEGER && rType == VAR_TYPES.INTEGER) {
 			variableTypes.put(node, VAR_TYPES.INTEGER);
@@ -368,7 +377,9 @@ public class FirstVisitor extends DepthFirstAdapter {
 					((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
 		}
 
-		if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
+		if (rType == VAR_TYPES.NONE || lType == VAR_TYPES.NONE) {
+			printError(node, ERROR_TYPES.NONE_OPERATION);
+		} else if (lType == VAR_TYPES.UNKNOWN || rType == VAR_TYPES.UNKNOWN) {
 			variableTypes.put(node, VAR_TYPES.UNKNOWN);
 		} else if (isNumber(lType) && isNumber(rType)) {
 			variableTypes.put(node, VAR_TYPES.DOUBLE);
@@ -414,6 +425,10 @@ public class FirstVisitor extends DepthFirstAdapter {
 
 			case MINUS_TYPE_MISSMATCH:
 				message += ": Variable type missmatch in substraction.";
+				break;
+
+			case NONE_OPERATION:
+				message += ": Illegal operation with None.";
 				break;
 
 			case IDENTICAL_FUNCTIONS:
