@@ -18,7 +18,7 @@ public class SecondVisitor extends DepthFirstAdapter {
 
     @Override
     @SuppressWarnings("unchecked")
-    public void inAFunctionCall(AFunctionCall node) {
+    public void outAFunctionCall(AFunctionCall node) {
         // Get the function's name
         AIdentifier identifier = (AIdentifier) node.getIdentifier();
         String name = identifier.getId().getText();
@@ -113,22 +113,10 @@ public class SecondVisitor extends DepthFirstAdapter {
         }
 
         // ********************************* \\
-        // Find the function's return type
-        // if (function.getStatement() instanceof AReturnStatement) {
-        //     caseAReturnStatement((AReturnStatement) function.getStatement());
-        // }
         if (function.getStatement() != null) {
             function.getStatement().apply(this);
         }
     }
-
-    // public void customCaseAReturnStatement(AReturnStatement node) {
-    //     inAReturnStatement(node);
-    //     if (node.getArithmetics() != null) {
-    //         node.getArithmetics().apply(this);
-    //     }
-    //     outAReturnStatement(node);
-    // }
 
     @Override
     public void outANumberArithmetics(ANumberArithmetics node) {
@@ -192,7 +180,9 @@ public class SecondVisitor extends DepthFirstAdapter {
         }
 
         // All children must return a number for the expression to be valid
-        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+        if (rType == FirstVisitor.VAR_TYPES.NONE || lType == FirstVisitor.VAR_TYPES.NONE) {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.NONE_OPERATION);
+        } else if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
         } else if (lType == FirstVisitor.VAR_TYPES.INTEGER && rType == FirstVisitor.VAR_TYPES.INTEGER) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.INTEGER);
@@ -222,9 +212,11 @@ public class SecondVisitor extends DepthFirstAdapter {
         }
 
         // The childrens' types must match
-        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+        if (rType == FirstVisitor.VAR_TYPES.NONE || lType == FirstVisitor.VAR_TYPES.NONE) {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.NONE_OPERATION);
+        } else if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
-        } else if (lType == rType && lType != FirstVisitor.VAR_TYPES.NONE) {
+        } else if (lType == rType) {
             variableTypes.put(node, lType);
         } else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
@@ -251,7 +243,9 @@ public class SecondVisitor extends DepthFirstAdapter {
                     ((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
         }
 
-        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+        if (rType == FirstVisitor.VAR_TYPES.NONE || lType == FirstVisitor.VAR_TYPES.NONE) {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.NONE_OPERATION);
+        } else if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
 			variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
         } else if (lType == FirstVisitor.VAR_TYPES.INTEGER && rType == FirstVisitor.VAR_TYPES.INTEGER) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.INTEGER);
@@ -284,7 +278,9 @@ public class SecondVisitor extends DepthFirstAdapter {
         }
 
         // All children must return a number for the expression to be valid
-        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+        if (rType == FirstVisitor.VAR_TYPES.NONE || lType == FirstVisitor.VAR_TYPES.NONE) {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.NONE_OPERATION);
+        } else if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
         } else if (lType == FirstVisitor.VAR_TYPES.INTEGER && rType == FirstVisitor.VAR_TYPES.INTEGER) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.INTEGER);
@@ -317,7 +313,9 @@ public class SecondVisitor extends DepthFirstAdapter {
                     ((AIdentifier) ((AIdentifierArithmetics) node.getR()).getIdentifier()).getId().getText());
         }
 
-        if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
+        if (rType == FirstVisitor.VAR_TYPES.NONE || lType == FirstVisitor.VAR_TYPES.NONE) {
+            FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.NONE_OPERATION);
+        } else if (lType == FirstVisitor.VAR_TYPES.UNKNOWN || rType == FirstVisitor.VAR_TYPES.UNKNOWN) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.UNKNOWN);
         } else if (FirstVisitor.isNumber(lType) && FirstVisitor.isNumber(rType)) {
             variableTypes.put(node, FirstVisitor.VAR_TYPES.DOUBLE);
@@ -330,8 +328,19 @@ public class SecondVisitor extends DepthFirstAdapter {
     public void outAFunctionArithmetics(AFunctionArithmetics node) {
         // Find the function's type using it's identifier
         String id = ((AIdentifier) ((AFunctionCall) node.getFunctionCall()).getIdentifier()).getId().getText();
-        FirstVisitor.VAR_TYPES type = findVariableType(id);
-        variableTypes.put(node, type);
+        
+        // Find the function's definition
+        if (findVariableType(id) != FirstVisitor.VAR_TYPES.NONE) {
+            AFunction function = (AFunction) (functions.get(id).parent());
+            if (function.getStatement() instanceof AReturnStatement) {
+                function.getStatement().apply(new FirstVisitor(variables, functions, variableTypes));
+
+                // The function call has the same type as the function's return statement
+                PArithmetics arithmetics = ((AReturnStatement) function.getStatement()).getArithmetics();
+                // variableTypes.put(function.getIdentifier(), variableTypes.get(arithmetics));  // -0
+                variableTypes.put(node, variableTypes.get(arithmetics));
+            }
+        }
     }
 
     // Helper methods
