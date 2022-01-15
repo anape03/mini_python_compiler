@@ -2,7 +2,6 @@
 # Right
 n = None
 print None
-t = (None == None)
 
 # Wrong
 def add(x, y=2):
