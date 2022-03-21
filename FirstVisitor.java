@@ -3,14 +3,20 @@ import java.util.*;
 import minipython.analysis.DepthFirstAdapter;
 import minipython.node.*;
 
-
+/**
+* The FirstVisitor does a first traversal of the code and stores the variables and functions to their hashtables accordingly
+*/
 public class FirstVisitor extends DepthFirstAdapter {
+
 	private final Hashtable<String, Node> variables;
 	private final Hashtable<String, Node> functions;
 
 	private final Hashtable<Node, VAR_TYPES> variableTypes;
 	private final List<Function> functionList;
 
+	/**
+	* All the recognisable potential error types listed
+	*/
 	public static enum ERROR_TYPES {
 		UNDECLARED_VARIABLE,
 		UNDEFINED_FUNCTION,
@@ -23,6 +29,9 @@ public class FirstVisitor extends DepthFirstAdapter {
 		IDENTICAL_FUNCTIONS,
 	}
 
+	/**
+	* All the potential variable types listed
+	*/
 	public static enum VAR_TYPES {
 		INTEGER,
 		DOUBLE,
@@ -31,6 +40,11 @@ public class FirstVisitor extends DepthFirstAdapter {
 		UNKNOWN,
 	}
 
+	/**
+    * @param variables hashtable containing the name and node of the variables read.
+    * @param funcitons hashtable containing the name and node of the functions read.
+	* @param variableTypes hashtable containing the node and type of the variables read.
+    */
 	public FirstVisitor(Hashtable<String, Node> variables, Hashtable<String, Node> functions, 
 			Hashtable<Node, VAR_TYPES> variableTypes) {
 		this.variables = variables;
@@ -107,7 +121,9 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 	}
 
-	// Make sure no two functions share the same name and parameters' name
+	/**
+	* Make sure no two functions share the same name and parameters' name
+	*/
 	@Override
 	@SuppressWarnings("unchecked")
 	public void inAFunction(AFunction node) {
@@ -389,7 +405,12 @@ public class FirstVisitor extends DepthFirstAdapter {
 	}
 
 	// Helper methods
-	// Print the appropriate error message
+
+	/**
+	* Prints the appropriate error message
+	* @param node the node causing the error
+	* @param type the error's type
+	*/
 	public static void printError(Node node, ERROR_TYPES type) {
 		String message = "Error";
 		AIdentifier id;
@@ -444,6 +465,12 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 	}
 
+	/**
+	* Prints the appropriate error messages for more advanced cases
+	* @param node the node causing the error
+	* @param type the error's type
+	* @param name the function's name
+	*/
 	public static void printError(Node node, ERROR_TYPES type, String name) {
 		String message = "Error";
 		switch (type) {
@@ -459,8 +486,11 @@ public class FirstVisitor extends DepthFirstAdapter {
 		System.exit(-1);
 	}
 
-	// Given a token's name find the matching variable's type
-	// Works only for AIdentifier
+	/**
+	* Given a token's name find the matching variable's type (for AIdentifier)
+	* @param token the given token's mame
+	* @return the variable's type
+	*/
 	private VAR_TYPES findVariableType(String token) {
 		for (Node node : variableTypes.keySet()) {
 			if (node instanceof AIdentifier) {
@@ -473,7 +503,11 @@ public class FirstVisitor extends DepthFirstAdapter {
 		return null;
 	}
 
-	// Find the number's subtype
+	/**
+	* Finds a number's subtype
+	* @param number the given number
+	* @return the number's type (INTEGER or DOUBLE)
+	*/
 	public static VAR_TYPES getNumberSubtype(PNumber number) {
 		if (number instanceof AIntNumber) {
 			return VAR_TYPES.INTEGER;
@@ -482,6 +516,11 @@ public class FirstVisitor extends DepthFirstAdapter {
 		}
 	}
 
+	/**
+	* Checks if a given variable type is that of a number
+	* @param type the given variable type
+	* @return true or false
+	*/
 	public static boolean isNumber(VAR_TYPES type) {
 		return type == VAR_TYPES.INTEGER || type == VAR_TYPES.DOUBLE;
 	}

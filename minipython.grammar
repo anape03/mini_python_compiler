@@ -101,7 +101,6 @@ Productions
 		        | {for} tab* for [id1]:identifier in [id2]:identifier semi statement {-> New statement.for(id1,id2,statement)} /********** */
 		        | {return} tab* return arithmetics {-> New statement.return(arithmetics)}
 		        | {print} tab* print arithmetics comma_expr* {-> New statement.print(arithmetics,[comma_expr])}
-				/*| {assignments} tab* identifier assignment_operators arithmetics {-> New statement.assignments(identifier,assignment_operators,arithmetics)}*/
 				
 				| {assignment} tab* identifier assign arithmetics {-> New statement.assignment(identifier,arithmetics)}
 				| {minusassignment} tab* identifier minusassign arithmetics {-> New statement.minusassignment(identifier,arithmetics)}
@@ -110,11 +109,6 @@ Productions
 				| {listassignment} tab* identifier l_br [index]:arithmetics r_br assign [value]:arithmetics {-> New statement.listassignment(identifier,index,value)} /********** */
 		        | {assert} tab* assert arithmetics comma_expr? statement {-> New statement.assert(arithmetics,[comma_expr],statement)}
 		        | {call} function_call {-> New statement.call(function_call)};
-				
-	/* Assignment operators */
-		/*assignment_operators = {assign} assign 
-				| {minusassign} minusassign 
-				| {divassign} divassign;*/
 
 	/* Comparison | Level 1 */
 		comparison {-> comparison_lvl_four} = {rule1} [exp1]:arithmetics comparison_operators [exp2]:arithmetics {-> New comparison_lvl_four.rule1(exp1, exp2)} 
@@ -153,10 +147,6 @@ Productions
 	/* Level 1 */
 	expexpr {-> arithmetics} = {expr} expression {-> expression.arithmetics}
 			| {multdiv} expexpr exp expression {-> New arithmetics.exp(expexpr.arithmetics, expression.arithmetics)};
-
-	/* Operators */
-	// plusminus{->} = {plus} plus {->} | {minus} minus {->};
-	// multdiv{->} = {mult} mult {->} | {div} div {->} | {mod} mod {->};
 
 	/* Expression */
 	expression {-> arithmetics} = {element} element{-> element.arithmetics}
@@ -251,12 +241,10 @@ Abstract Syntax Tree
 				| {mult} [l]:arithmetics [r]:arithmetics
 				| {div} [l]:arithmetics [r]:arithmetics
 				| {exp} [l]:arithmetics [r]:arithmetics
-				/*| {element} element */
 				| {listcall} identifier arithmetics
 				| {len} arithmetics
 				| {maxmin} arithmetics comma_expr*
 				| {list} arg_list
-				/*|{value} value*/ /* element */
 				| {identifier} identifier
 				| {function} function_call
 				| {arithmetics} arithmetics
@@ -270,9 +258,7 @@ Abstract Syntax Tree
 	arg_list = arithmetics comma_expr*;
 	comma_expr = arithmetics;
 			
-	/*module = id_dot* identifier;*/
 	as_id = identifier;
-	/*more_modules = module as_id*;*/
 	more_ids = identifier as_id*;
 	id_dot = identifier;
 

@@ -4,6 +4,7 @@ import minipython.parser.Parser;
 import minipython.node.*;
 import java.util.*;
 
+// The Semantics class calls and applies the Visitors
 public class Semantics {
     public static void main(String[] args) {
         try {
