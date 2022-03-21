@@ -6,8 +6,7 @@ This project's goal was to build a compiler's grammar as well as create the comp
 
 This compiler was made for a simplified version of the python language (MiniPython), and was created with the help of SableCC. The compiler is based on the following BNF.
 
-![BNF](docs\BNF.png)
-
+![BNF](docs/BNF.png)
 
 ## How to Run
 
@@ -23,4 +22,3 @@ This compiler was made for a simplified version of the python language (MiniPyth
 * [Christos Oliver Pavlidis](https://github.com/01iverr)
 * [Despoina Georgiadi](https://github.com/DebsTheLemon)
 * [Konstantinos Vasilopoulos](https://github.com/KonstantinosVasilopoulos)
-
