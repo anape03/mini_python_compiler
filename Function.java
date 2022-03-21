@@ -1,3 +1,9 @@
+/**
+ * Data class for storing function related information
+ * @param name the function's name
+ * @param params the number of parameters
+ * @param defaultParams the number of parameters with default arguments
+ */
 public class Function {
     private String name;
     private int params;

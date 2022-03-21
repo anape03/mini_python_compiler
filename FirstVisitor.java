@@ -4,8 +4,13 @@ import minipython.analysis.DepthFirstAdapter;
 import minipython.node.*;
 
 /**
-* The FirstVisitor does a first traversal of the code and stores the variables and functions to their hashtables accordingly
-*/
+ * The FirstVisitor does a first traversal of the code and stores the variables
+ * and functions to their hashtables accordingly
+ * 
+ * @param variables     hashtable containing the name and node of the variables read
+ * @param funcitons     hashtable containing the name and node of the functions read
+ * @param variableTypes hashtable containing the node and type of the variables read
+ */
 public class FirstVisitor extends DepthFirstAdapter {
 
 	private final Hashtable<String, Node> variables;
@@ -40,11 +45,6 @@ public class FirstVisitor extends DepthFirstAdapter {
 		UNKNOWN,
 	}
 
-	/**
-    * @param variables hashtable containing the name and node of the variables read.
-    * @param funcitons hashtable containing the name and node of the functions read.
-	* @param variableTypes hashtable containing the node and type of the variables read.
-    */
 	public FirstVisitor(Hashtable<String, Node> variables, Hashtable<String, Node> functions, 
 			Hashtable<Node, VAR_TYPES> variableTypes) {
 		this.variables = variables;

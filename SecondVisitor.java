@@ -3,7 +3,16 @@ import java.util.*;
 import minipython.analysis.DepthFirstAdapter;
 import minipython.node.*;
 
-
+/**
+ * The SecondVisitor does the second traversal of the code to handle
+ * function calls that appear before their declaration.
+ * Additionally, variable declarations located in the body of a function are
+ * handled by this visitor.
+ * 
+ * @param variables     hashtable containing the name and node of the variables read
+ * @param funcitons     hashtable containing the name and node of the functions read
+ * @param variableTypes hashtable containing the node and type of the variables read
+ */
 public class SecondVisitor extends DepthFirstAdapter {
     private final Hashtable<String, Node> variables;
     private final Hashtable<String, Node> functions;
@@ -73,7 +82,6 @@ public class SecondVisitor extends DepthFirstAdapter {
             FirstVisitor.printError(node, FirstVisitor.ERROR_TYPES.WRONG_PARAMS);
         }
 
-        // ********************************* \\
         // Check that the correct number of parameters has been given
         FirstVisitor.VAR_TYPES type;
         if (argumentsCall.size() > 0) {
@@ -112,7 +120,6 @@ public class SecondVisitor extends DepthFirstAdapter {
             }
         }
 
-        // ********************************* \\
         if (function.getStatement() != null) {
             function.getStatement().apply(this);
         }
@@ -344,6 +351,12 @@ public class SecondVisitor extends DepthFirstAdapter {
     }
 
     // Helper methods
+
+    /**
+     * Given a variable's name, return its type
+     * @param token the variable's name
+     * @return the variable's type
+     */
     private FirstVisitor.VAR_TYPES findVariableType(String token) {
         for (Node node : variableTypes.keySet()) {
             if (node instanceof AIdentifier) {
